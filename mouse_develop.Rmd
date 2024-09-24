@@ -1,0 +1,226 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+library(caroline)
+library(Seurat)
+library(stringr)
+library(ggplot2)
+library(patchwork)
+setwd("D:/scRNA_vasculature/mouse_development/")
+```
+
+```{r}
+data <- read.tab("D:/scRNA_vasculature/mouse_development/GSE104323_10X_expression_data.tab",header = T)
+row.names(data) <- data[,1]
+data <- data[,-1]
+
+meta <- read.table("D:/scRNA_vasculature/mouse_development/GSE104323_metadata_barcodes_24185cells.txt", sep = "\t",header = T)[1:24185,]
+meta$Sample.name..24185.single.cells. <- paste("X",meta$Sample.name..24185.single.cells., sep="")
+meta$Sample.name..24185.single.cells. <- str_replace_all(meta$Sample.name..24185.single.cells., "-",".")
+row.names(meta) <- meta$Sample.name..24185.single.cells.
+metadata <- meta[,c(5,7)]
+```
+
+```{r}
+seu_obj <- CreateSeuratObject(counts = data, min.cells = 3, meta.data = metadata)
+
+seu_data <- NormalizeData(object = seu_obj, scale.factor = 1e6)
+seu_data <- ScaleData(object = seu_data)
+seu_data <- FindVariableFeatures(object = seu_data)
+seu_data <- RunPCA(seu_data, verbose = FALSE)
+seu_data <- FindNeighbors(seu_data, dims = 1:30)
+seu_data <- FindClusters(seu_data, resolution = 1.0, verbose = FALSE)
+seu_data <- RunUMAP(seu_data, dims = 1:30)
+DimPlot(seu_data, reduction = "umap",  label = TRUE)
+```
+
+```{r}
+DimPlot(object = seu_data, group.by = 'characteristics..cell.cluster')
+```
+```{r}
+DimPlot(object = seu_data, group.by = 'characteristics..cell.cluster', cells.highlight = list("GABA"), cols.highlight=c("red"))
+
+```
+
+
+```{r}
+seu_data[["percent.mt"]] <- PercentageFeatureSet(seu_data, pattern = "^MT-")
+VlnPlot(seu_data, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+FeatureScatter(seu_data, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+```
+
+
+
+```{r}
+my_levels <- c("E16.5", "P0", "P5", "P18", "P19", "P23", "P120", "P132")
+seu_data@meta.data[["characteristics..age"]] <- factor(x = seu_data@meta.data[["characteristics..age"]], levels = my_levels)
+
+VlnPlot(seu_data, features = "Gpr4",group.by = "characteristics..age") + labs(title = "Gpr4 expression level from E16.5 to P132")
+
+```
+```{r}
+FeaturePlot(seu_data, features = "Gpr4")
+```
+
+```{r}
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "RGL"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "RGL")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Astro-adult"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Astro-adult")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Astro-juv"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Astro-juv")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Immature-Astro"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Immature-Astro")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "RGL_young"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "RGL_youn")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Ependymal"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Ependymal")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "PVM"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "PVM")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "MiCajal-Retziusoglia"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "MiCajal-Retziusogli")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Endothelial"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Endothelial")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "VLMC"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "VLMC")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "MOL"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "MOL")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "NFOL"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "NFOL")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "OPC"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "OPC")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "nIPC-perin"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "nIPC-perin")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "nIPC"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "nIPC")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Neuroblast"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Neuroblast")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Immature-GC"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Immature-GC")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Immature-Pyr"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Immature-Pyr")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Cajal-Retzius"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Cajal-Retzius")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Immature-GABA"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Immature-GABA")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "GABA"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "GABA")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "CA3-Pyr"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "CA3-Pyr")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "GC-juv"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "GC-juv")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "GC-adult"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "GC-adult")
+```
+
+```{r}
+VlnPlot(seu_data, features = "H19",group.by = "characteristics..age")
+```
+
+```{r}
+
+seu_data[["cluster_idents"]] <- Idents(seu_data)
+Idents(seu_data) <- seu_data@meta.data$characteristics..cell.cluster
+endo_cells <- subset(seu_data, idents = c("Endothelial"))
+Idents(endo_cells) <- endo_cells@meta.data$characteristics..age
+
+# RenameIdnets
+endo_cells <- RenameIdents(endo_cells, 'E16.5' = "embryonic")
+endo_cells <- RenameIdents(endo_cells, 'P0' = "postnatal", 'P5' = "postnatal")
+endo_cells <- RenameIdents(endo_cells, 'P18' = "weaning",'P19' = "weaning",  'P23' = "weaning")
+endo_cells <- RenameIdents(endo_cells, 'P120' = "adult", 'P132' = "adult")
+Idents(endo_cells) <- factor(Idents(endo_cells), levels = c("embryonic", "postnatal", "weaning","adult"))
+```
+
+
+
+```{r}
+#library(presto)
+
+deg <- FindMarkers(object = endo_cells, 
+                         ident.1 = "postnatal", 
+                         ident.2 = "embryonic",
+                         logfc.threshold = 0.2)
+
+deg2 <- FindMarkers(object = endo_cells, 
+                         ident.1 = "weaning", 
+                         ident.2 = "postnatal",
+                         logfc.threshold = 0.2)
+deg3 <- FindMarkers(object = endo_cells, 
+                         ident.1 = "adult", 
+                         ident.2 = "weaning",
+                         logfc.threshold = 0.2)
+
+write.csv(deg, "D:/scRNA_vasculature/mouse_development/result/DEGs_postnatal_vs_embryonic.csv", quote = FALSE)
+write.csv(deg2, "D:/scRNA_vasculature/mouse_development/result/DEGs_weaning_vs_postnatal.csv", quote = FALSE)
+write.csv(deg3, "D:/scRNA_vasculature/mouse_development/result/DEGs_adult_vs_weaning.csv", quote = FALSE)
+
+```
+
+
+
+## common shared
+```{r}
+deg_filtered <- deg[deg$p_val<0.01 & (deg$avg_log2FC > 0.3 | deg$avg_log2FC < -0.3),]
+deg2_filtered <- deg2[deg2$p_val<0.01 & (deg2$avg_log2FC > 0.3 | deg2$avg_log2FC < -0.3),]
+deg3_filtered <- deg3[deg3$p_val<0.01 & (deg3$avg_log2FC > 0.3 | deg3$avg_log2FC < -0.3),]
+
+shared_genes <- intersect(row.names(deg_filtered), row.names(deg2_filtered))
+shared_genes <- intersect(shared_genes, row.names(deg3_filtered))
+```
+
+## peak group
+```{r}
+deg_1 <- deg[deg$p_val<0.01 & (deg$avg_log2FC > 0.3),]
+deg_2 <- deg2[deg2$p_val<0.01 & (deg2$avg_log2FC < -0.3),]
+deg_3 <- deg3[deg3$p_val<0.01 & (deg3$avg_log2FC < -0.3),]
+
+peak_genes <- intersect(row.names(deg_1), row.names(deg_3))
+peak_genes <- intersect(peak_genes, row.names(deg_3))
+```
+
+
+```{r}
+pdf(file= "D:/scRNA_vasculature/mouse_development/result/peakgenes_overview.pdf", onefile = TRUE)
+for (i in seq(1, length(peak_genes), by = 6)){
+  p <- VlnPlot(endo_cells, features = peak_genes[i:(i+5)], pt.size = 0.2, ncol = 3)
+  print(p)
+}
+dev.off()
+
+#final_genes_1 <- c("Nrgn", "Slc1a2", "Slc6a11", "Camk2a", "Gnal", "AI593442", "Tspan7", "Fam19a2", "Fam163b", "Atp1b2", "Lor", "Frrs1l", "Cdk5r2", "Dtna", "Paqr9", "Hepacam", "Syt13", "Ntsr2", "Eef1a2", "Adap1", "Myo6", "Prkcg", "Kcnc3", "Icam5", "Gpr37l1", "Tuba4a", "Npnt", "Plekhb1")
+
+final_genes_1 <- c("Slc16a1", "Nomo1", "St3gal6", "Car4")
+pdf(file= "D:/scRNA_vasculature/mouse_development/result/promising_degs_up.pdf", onefile = TRUE)
+for (i in seq(1, length(final_genes_1), by = 4)){
+  p <- VlnPlot(endo_cells, features = final_genes_1[i:(i+3)], pt.size = 0.2, ncol = 2)
+  print(p)
+}
+dev.off()
+
+
+#final_genes_2 <- c("Gm10605", "Slc6a7", "Rasgrf2", "Rasgrp1", "Serpina3n", "Capn3", "Pllp", "Dio2", "Tmem114", "Lrrc10b", "Sox10", "Gpr17", "Baalc", "AI464131", "Fam107a", "Kcng2", "Atp2b3", "Slc7a10", "Padi2", "Epas1", "Neat1", "Gprc5b", "Gpr68","Kcnj16", "Slc39a12", "Bhlhe41", "Itga7")
+final_genes_2 <- c("Pfn1", "Pdia6", "Slc25a5", "Gpx8", "Igf2", "Pdia3", "Abhd17a", "Cct4", "Marcksl1", "Rplp0", "Aplnr")
+
+pdf(file= "D:/scRNA_vasculature/mouse_development/result/promising_degs_down.pdf", onefile = TRUE)
+for (i in seq(1, length(final_genes_2), by = 4)){
+  p <- VlnPlot(endo_cells, features = final_genes_2[i:(i+3)], pt.size = 0.2, ncol = 2)
+  print(p)
+}
+dev.off()
+
+```
+
+```{r}
+deg["gene"] <- row.names(deg)
+write.csv(subset(deg, gene %in% final_genes_1 | gene %in% final_genes_2), "D:/scRNA_vasculature/mouse_development/result/promising_DEGs_postnatal_vs_embryonic.csv", quote = FALSE)
+deg2["gene"] <- row.names(deg2)
+write.csv(subset(deg2, gene %in% final_genes_1 | gene %in% final_genes_2), "D:/scRNA_vasculature/mouse_development/result/promising_DEGs_weaning_vs_postnatal.csv", quote = FALSE)
+deg3["gene"] <- row.names(deg3)
+write.csv(subset(deg3, gene %in% final_genes_1 | gene %in% final_genes_2), "D:/scRNA_vasculature/mouse_development/result/promising_DEGs_adult_vs_weaning.csv", quote = FALSE)
+
+
+```
+
+
+
+```{r}
+pdf(file= "D:/scRNA_vasculature/mouse_development/result/candidate_ov.pdf", onefile = TRUE)
+for (i in seq(1, length(shared_genes), by = 6)){
+  p <- FeaturePlot(target, features = feature_list[i:(i+5)], pt.size = 0.2, ncol = 3)
+  print(p)
+  dev.off()
+}
+dev.off()
+
+pdf(file= "D:/scRNA_vasculature/mouse_development/result/final_degs.pdf", onefile = TRUE)
+for (i in seq(1, length(shared_genes), by = 6)){
+  p <- FeaturePlot(target, features = feature_list[i:(i+5)], pt.size = 0.2, ncol = 3)
+  print(p)
+  dev.off()
+}
+dev.off()
+
+```
+

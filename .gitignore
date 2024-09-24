@@ -1,0 +1,12 @@
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+.RDataTmp
+.tab
+
+# previous res
+result/11_14_2022/
+result/candidate_ov.pdf
