@@ -63,13 +63,13 @@ DimPlot(seu_data, group.by = 'characteristics..cell.cluster',  label = TRUE) + c
 ```{r}
 my_levels <- c("E16.5", "P0", "P5", "P18", "P19", "P23", "P120", "P132")
 seu_data@meta.data[["characteristics..age"]] <- factor(x = seu_data@meta.data[["characteristics..age"]], levels = my_levels)
-VlnPlot(seu_data, features = "Gpr4",group.by = "characteristics..age") + labs(title = "Gpr4 expression level from E16.5 to P132")
+VlnPlot(seu_data, features = "Gpr4", group.by = "characteristics..age") + labs(title = "Gpr4 expression level from E16.5 to P132")
 ```
 
 ```{r}
 FeaturePlot(seu_data, features = "Gpr4")
 ```
-
+# Gpr4 VlnPlot across cell types
 ```{r}
 VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "RGL"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "RGL")
 VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Astro-adult"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Astro-adult")
@@ -110,18 +110,18 @@ VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Endothel
 ec_markers <- FindMarkers(seu_data, only.pos = TRUE, group.by = "characteristics..cell.cluster", ident.1 = "Endothelial", ident.2 = c('RGL','Astro-adult','Astro-juv','Immature-Astro','RGL_young','Ependymal','PVM','MiCajal-Retziusoglia','VLMC','MOL','NFOL','OPC','nIPC-perin','nIPC','Neuroblast','Immature-GC','Immature-Pyr','Cajal-Retzius','Immature-GABA','GABA','CA3-Pyr','GC-juv','GC-adult'), logfc.threshold = 0.2)
 ```
 
-# qc
+# qc the ec markers
 ```{r}
 ec_markers <- ec_markers[ec_markers$pct.1 > 0.6 & ec_markers$pct.2 < 0.1 & ec_markers$p_val < 0.05, ]
 write.csv(ec_markers, "result/deg_tab_ec_specific_46.csv")
 
 # get 7xx degs -> 46 degs
-
 ```
 
-# plot 
+# plot ec markers
 ```{r}
-cwd <- "~/Desktop/mouse_development/brain_vasculature_co2"
+#cwd <- "~/Desktop/mouse_development/brain_vasculature_co2"
+cwd <- "E:/Shuting/gpr/brain_vasculature_co2-master"
 
 # edit HERE
 pdf(file= paste0(cwd, "/result/ec_ov_ratio_adj_46genes.pdf"), onefile = TRUE)
@@ -135,6 +135,8 @@ for (i in seq(1, length(candidates), by = 9)){
 }
 dev.off()
 ```
+
+#  arrow down the markers
 # ---------- NOTE ----------
 # from ec_ov_ratio_adj.pdf
 # ec-specific markers: 
@@ -174,7 +176,7 @@ DoHeatmap(object = seu_data, features = row.names(ec_fil_markers),  label=FALSE)
 
 ## ====> subset the ECs and label the temporal clusters
 # NOTE
-# EC ct: 543 cells
+# EC: 543 cells
 
 ```{r}
 # subset
@@ -188,17 +190,14 @@ endo_cells <- subset(seu_data, idents = c("Endothelial"))
 # count ECs
 
 # clustering
-endo_cells <- NormalizeData(object = endo_cells, scale.factor = 1e6)
+endo_cells <- NormalizeData(object = endo_cells)
 endo_cells <- ScaleData(object = endo_cells)
 endo_cells <- FindVariableFeatures(object = endo_cells)
 endo_cells <- RunPCA(endo_cells, verbose = FALSE)
 endo_cells <- FindNeighbors(endo_cells, dims = 1:30)
-endo_cells <- FindClusters(endo_cells, resolution = 0.9, verbose = FALSE)
+endo_cells <- FindClusters(endo_cells, resolution = 1, verbose = FALSE)
 endo_cells <- RunUMAP(endo_cells, dims = 1:30)
 
-
-test <- NormalizeData(object = test, scale.factor = 1e6)
-test <- ScaleData(object = test)
 ```
 
 
@@ -216,6 +215,9 @@ endo_cells <- RenameIdents(endo_cells, 'P0' = "postnatal", 'P5' = "postnatal")
 endo_cells <- RenameIdents(endo_cells, 'P18' = "weaning",'P19' = "weaning",  'P23' = "weaning")
 endo_cells <- RenameIdents(endo_cells, 'P120' = "adult", 'P132' = "adult")
 Idents(endo_cells) <- factor(Idents(endo_cells), levels = c("embryonic", "postnatal", "weaning","adult"))
+
+DimPlot(endo_cells, reduction = "umap",  label = TRUE)
+
 ```
 
 ## ====> temporal-specific markers
@@ -233,8 +235,8 @@ write.csv(deg3, "result/deg_tab_ec_adult.csv")
 
 # qc
 ```{r}
-pct_thres <- 0.3
-fc_thres <- 0.2
+pct_thres <- 0.2
+fc_thres <- 0.1
 pv <- 0.05
 
 deg1_filtered <- deg1[(deg1$p_val<pv & abs(deg1$avg_log2FC) > fc_thres),]
