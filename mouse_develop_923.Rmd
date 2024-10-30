@@ -99,7 +99,10 @@ VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "GC-adult
 
 ```{r}
 VlnPlot(seu_data, features = "H19",group.by = "characteristics..age")
-VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Endothelial"), features = "H19",group.by = "characteristics..age") + labs(title = "Endothelial")
+
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Endothelial"), features = "H19",group.by = "characteristics..age") + labs(title = "H19 expression level from E16.5 to P132")
+VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "Endothelial"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "Gpr4 expression level from E16.5 to P132")
+
 ```
 
 ## ====> check out other EC-specific markers
@@ -109,37 +112,77 @@ ec_markers <- FindMarkers(seu_data, only.pos = TRUE, group.by = "characteristics
 
 # qc
 ```{r}
-ec_markers <- ec_markers[ec_markers$pct.1 > 0.3 & ec_markers$p_val < 0.05, ]
+ec_markers <- ec_markers[ec_markers$pct.1 > 0.6 & ec_markers$pct.2 < 0.1 & ec_markers$p_val < 0.05, ]
+write.csv(ec_markers, "result/deg_tab_ec_specific_46.csv")
+
+# get 7xx degs -> 46 degs
+
 ```
 
 # plot 
 ```{r}
-pdf(file= "/result/ec_ov_1.pdf", onefile = TRUE)
-for (i in seq(1, length(shared_genes), by = 6)){
-  p1 <- FeaturePlot(target, features = feature_list[i:(i+5)], pt.size = 0.2, ncol = 3)
-  p2 <- VlnPlot(target, features = feature_list[i:(i+5)], pt.size = 0.2, ncol = 3)
-  print(p1+p2)
+cwd <- "~/Desktop/mouse_development/brain_vasculature_co2"
+
+# edit HERE
+pdf(file= paste0(cwd, "/result/ec_ov_ratio_adj_46genes.pdf"), onefile = TRUE)
+candidates <- row.names(ec_markers[1:46,])
+
+for (i in seq(1, length(candidates), by = 9)){
+  p1 <- FeaturePlot(seu_data, features = candidates[i:(i+8)], pt.size = 0.2, ncol = 3)
+  #p2 <- VlnPlot(seu_data, features = candidates[i:(i+8)], pt.size = 0.2, group.by = 'characteristics..cell.cluster', ncol = 3)
+  print(p1)
+  #print(p2)
+}
+dev.off()
+```
+# ---------- NOTE ----------
+# from ec_ov_ratio_adj.pdf
+# ec-specific markers: 
+# c("Cldn5", "Flt1",  "Ly6c1", "Igfbp7", "Itm2a", "Slco1a4", "Ptprb", "Esam", "Adgrl4", "Eng", "Ctla2a", "Itm2a", "Pglyrp1", "Kdr", "Pltp",  "Cd34", "Adgrl4", "BC028528", "Vwa1", "Adgrf5", "Ebf1", "Slc22a8", "Fn1", "St3gal6", "Ccdc141", "Ifitm3", "Klf2")
+
+```{r}
+ec_fil_genes <- c("Cldn5", "Flt1",  "Ly6c1", "Igfbp7", "Slco1a4", "Ptprb", "Esam", "Eng", "Ctla2a", "Itm2a", "Pglyrp1", "Kdr", "Pltp", "Cd34", "Adgrl4", "BC028528", "Vwa1", "Adgrf5", "Ebf1", "Slc22a8", "Fn1", "St3gal6", "Ccdc141", "Ifitm3", "Klf2")
+ec_markers$gene <- row.names(ec_markers)
+ec_fil_markers <- ec_markers[ec_markers$gene %in% ec_fil_genes,]
+write.csv(ec_fil_markers, "result/deg_tab_ec_specific_25.csv")
+```
+
+
+```{r}
+# edit HERE
+pdf(file= paste0(cwd, "/result/ec_ov_ratio_adj_25genes.pdf"), onefile = TRUE)
+candidates <- row.names(ec_fil_markers)
+
+for (i in seq(1, length(candidates), by = 4)){
+  p1 <- FeaturePlot(seu_data, features = candidates[i:(i+3)], pt.size = 0.2, ncol = 2)
+  #p2 <- VlnPlot(seu_data, features = candidates[i:(i+3)], pt.size = 0.2, group.by = 'characteristics..cell.cluster', ncol = 3)
+  print(p1)
+  #print(p2)
 }
 dev.off()
 ```
 
 
+```{r}
+DoHeatmap(object = seu_data, features = row.names(ec_markers), label=FALSE) + theme(axis.text.x = element_text(size = 4), axis.text.y = element_text(size = 5), legend.text = element_text(size = 6))
+DoHeatmap(object = seu_data, features = row.names(ec_fil_markers),  label=FALSE) + theme(axis.text.x = element_text(size = 4), axis.text.y = element_text(size = 5), legend.text = element_text(size = 6))
+
+```
+
+
+
+
 ## ====> subset the ECs and label the temporal clusters
+# NOTE
+# EC ct: 543 cells
 
 ```{r}
 # subset
 seu_data[["cluster_idents"]] <- Idents(seu_data)
 Idents(seu_data) <- seu_data@meta.data$characteristics..cell.cluster
 endo_cells <- subset(seu_data, idents = c("Endothelial"))
-Idents(endo_cells) <- endo_cells@meta.data$characteristics..age
-
-# RenameIdnets
-endo_cells <- RenameIdents(endo_cells, 'E16.5' = "embryonic")
-endo_cells <- RenameIdents(endo_cells, 'P0' = "postnatal", 'P5' = "postnatal")
-endo_cells <- RenameIdents(endo_cells, 'P18' = "weaning",'P19' = "weaning",  'P23' = "weaning")
-endo_cells <- RenameIdents(endo_cells, 'P120' = "adult", 'P132' = "adult")
-Idents(endo_cells) <- factor(Idents(endo_cells), levels = c("embryonic", "postnatal", "weaning","adult"))
 ```
+
 
 ```{r}
 # count ECs
@@ -152,10 +195,148 @@ endo_cells <- RunPCA(endo_cells, verbose = FALSE)
 endo_cells <- FindNeighbors(endo_cells, dims = 1:30)
 endo_cells <- FindClusters(endo_cells, resolution = 0.9, verbose = FALSE)
 endo_cells <- RunUMAP(endo_cells, dims = 1:30)
+
+
+test <- NormalizeData(object = test, scale.factor = 1e6)
+test <- ScaleData(object = test)
 ```
+
 
 # plot
 ```{r}
 DimPlot(endo_cells, reduction = "umap",  label = TRUE)
 ```
 
+```{r}
+Idents(endo_cells) <- endo_cells@meta.data$characteristics..age
+
+# RenameIdnets
+endo_cells <- RenameIdents(endo_cells, 'E16.5' = "embryonic")
+endo_cells <- RenameIdents(endo_cells, 'P0' = "postnatal", 'P5' = "postnatal")
+endo_cells <- RenameIdents(endo_cells, 'P18' = "weaning",'P19' = "weaning",  'P23' = "weaning")
+endo_cells <- RenameIdents(endo_cells, 'P120' = "adult", 'P132' = "adult")
+Idents(endo_cells) <- factor(Idents(endo_cells), levels = c("embryonic", "postnatal", "weaning","adult"))
+```
+
+## ====> temporal-specific markers
+```{r}
+DefaultAssay(endo_cells)  <- "RNA"
+
+deg1 <- FindMarkers(endo_cells, ident.1 = "postnatal", ident.2 = "embryonic", logfc.threshold = 0.2)
+write.csv(deg1, "result/deg_tab_ec_postnatal.csv")
+deg2 <- FindMarkers(endo_cells, ident.1 = "weaning", ident.2 = "postnatal", logfc.threshold = 0.2)
+write.csv(deg2, "result/deg_tab_ec_weaning.csv")
+deg3 <- FindMarkers(endo_cells, ident.1 = "adult", ident.2 = "weaning", logfc.threshold = 0.2)
+write.csv(deg3, "result/deg_tab_ec_adult.csv")
+
+```
+
+# qc
+```{r}
+pct_thres <- 0.3
+fc_thres <- 0.2
+pv <- 0.05
+
+deg1_filtered <- deg1[(deg1$p_val<pv & abs(deg1$avg_log2FC) > fc_thres),]
+deg2_filtered <- deg2[(deg2$p_val<pv & abs(deg2$avg_log2FC) > fc_thres),]
+deg3_filtered <- deg3[(deg3$p_val<pv & abs(deg3$avg_log2FC) > fc_thres),]
+
+
+deg1_filtered <- deg1_filtered[(((deg1_filtered$avg_log2FC > fc_thres)&(deg1_filtered$pct.1>pct_thres))|((deg1_filtered$avg_log2FC < -fc_thres)&(deg1_filtered$pct.2>pct_thres))),]
+deg2_filtered <- deg2_filtered[(((deg2_filtered$avg_log2FC > fc_thres)&(deg2_filtered$pct.1>pct_thres))|((deg2_filtered$avg_log2FC < -fc_thres)&(deg2_filtered$pct.2>pct_thres))),]
+deg3_filtered <- deg3_filtered[(((deg3_filtered$avg_log2FC > fc_thres)&(deg3_filtered$pct.1>pct_thres))|((deg3_filtered$avg_log2FC < -fc_thres)&(deg3_filtered$pct.2>pct_thres))),]
+
+```
+
+
+```{r}
+candidates_ec_deg <- intersect(intersect(row.names(deg1_filtered), row.names(deg2_filtered)), row.names(deg3_filtered))
+candidates_ec_deg_passed_pos <- c()
+candidates_ec_deg_passed_neg <- c()
+candidates_ec_deg_passed_peak <- c()
+
+diff <- 0
+for (i in candidates_ec_deg){
+  if (deg1_filtered[i, "avg_log2FC"] >0 & deg2_filtered[i, "avg_log2FC"] > 0 & deg3_filtered[i, "avg_log2FC"] > 0){
+    if((deg1_filtered[i, "pct.1"] - deg1_filtered[i, "pct.2"] > diff) & (deg2_filtered[i, "pct.1"] - deg2_filtered[i, "pct.2"] > diff) & (deg3_filtered[i, "pct.1"] - deg3_filtered[i, "pct.2"] > diff)){
+      candidates_ec_deg_passed_pos <- c(candidates_ec_deg_passed_pos, i)
+    }
+  }
+  else if (deg1_filtered[i, "avg_log2FC"] <0 & deg2_filtered[i, "avg_log2FC"] < 0 & deg3_filtered[i, "avg_log2FC"] < 0){
+    if((deg1_filtered[i, "pct.2"] - deg1_filtered[i, "pct.1"] > diff) & (deg2_filtered[i, "pct.2"] - deg2_filtered[i, "pct.1"] > diff) & (deg3_filtered[i, "pct.2"] - deg3_filtered[i, "pct.1"] > diff)){
+      candidates_ec_deg_passed_neg <- c(candidates_ec_deg_passed_neg, i)
+    }
+  }
+  else if (deg1_filtered[i, "avg_log2FC"] > 0 & deg2_filtered[i, "avg_log2FC"] > 0 & deg3_filtered[i, "avg_log2FC"] < 0){
+    if((deg1_filtered[i, "pct.1"] - deg1_filtered[i, "pct.2"] > diff) & (deg2_filtered[i, "pct.1"] - deg2_filtered[i, "pct.2"] > diff) & (deg3_filtered[i, "pct.2"] - deg3_filtered[i, "pct.1"] > diff)){
+      candidates_ec_deg_passed_peak <- c(candidates_ec_deg_passed_peak, i)
+    }
+  }
+}
+```
+
+```{r}
+print(candidates_ec_deg_passed_pos)
+print(candidates_ec_deg_passed_neg)
+```
+
+
+```{r}
+pdf(file= paste0(cwd, "/result/ec_up_genes.pdf"), onefile = TRUE)
+for (i in seq(1, length(candidates_ec_deg_passed_pos), by = 4)){
+  p <- VlnPlot(endo_cells, features = candidates_ec_deg_passed_pos[i:(i+3)], ncol = 2)
+  print(p)
+}
+dev.off()
+
+
+pdf(file= paste0(cwd, "/result/ec_down_genes.pdf"), onefile = TRUE)
+for (i in seq(1, length(candidates_ec_deg_passed_neg), by = 4)){
+  p <- VlnPlot(endo_cells, features = candidates_ec_deg_passed_neg[i:(i+3)], ncol = 2)
+  print(p)
+}
+dev.off()
+
+
+pdf(file= paste0(cwd, "/result/ec_peak_genes.pdf"), onefile = TRUE)
+for (i in seq(1, length(candidates_ec_deg_passed_peak), by = 4)){
+  p <- VlnPlot(endo_cells, features = candidates_ec_deg_passed_peak[i:(i+3)], ncol = 2)
+  print(p)
+}
+dev.off()
+
+```
+
+```{r}
+ec_markers <- ec_markers[ec_markers$pct.1 > 0.6 & ec_markers$pct.2 < 0.1 & ec_markers$p_val < 0.05, ]
+write.csv(ec_markers, "result/deg_tab_ec_specific_46.csv")
+
+# get 7xx degs -> 46 degs
+```
+
+
+```{r}
+test <- subset(seu_data, idents = c("Endothelial"))
+Idents(test) <- test@meta.data$characteristics..age
+
+# RenameIdnets
+test <- RenameIdents(test, 'E16.5' = "embryonic")
+test <- RenameIdents(test, 'P0' = "postnatal", 'P5' = "postnatal")
+test <- RenameIdents(test, 'P18' = "weaning",'P19' = "weaning",  'P23' = "weaning")
+test <- RenameIdents(test, 'P120' = "adult", 'P132' = "adult")
+Idents(test) <- factor(Idents(test), levels = c("embryonic", "postnatal", "weaning","adult"))
+```
+
+
+```{r}
+DoHeatmap(object = test, features = c("Hipk3", "Bmpr2", "Mbnl1", "Pura"), group.by = "characteristics..age", label=FALSE) + theme(axis.text.x = element_text(size = 4), axis.text.y = element_text(size = 5), legend.text = element_text(size = 6)) + scale_fill_gradientn(colors = c("blue", "grey", "red"))
+
+
+DoHeatmap(object = test, features = c("Ndufb5", "Cox7b", "Slc3a2", "Atp5b", "Car2" ,"Car4"), group.by = "characteristics..age", label=FALSE) + theme(axis.text.x = element_text(size = 4), axis.text.y = element_text(size = 5), legend.text = element_text(size = 6)) + scale_fill_gradientn(colors = c("blue", "grey", "red"))
+DoHeatmap(object = test, features = candidates_ec_deg_passed_peak, group.by = "characteristics..age", label=FALSE) + theme(axis.text.x = element_text(size = 4), axis.text.y = element_text(size = 5), legend.text = element_text(size = 6)) + scale_fill_gradientn(colors = c("blue", "grey", "red"))
+
+
+
+DoHeatmap(object = test, features = c("Slc3a2", "Car2", "Cox7b", "Atp5b", "Car4", "Dusp3", "Mbnl1", "Hipk3"), group.by = "characteristics..age", label=FALSE) + theme(axis.text.x = element_text(size = 4), axis.text.y = element_text(size = 5), legend.text = element_text(size = 6)) + scale_fill_gradientn(colors = c("yellow", "orange", "red"))
+
+```
