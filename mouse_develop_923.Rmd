@@ -57,6 +57,12 @@ DimPlot(seu_data, group.by = 'characteristics..cell.cluster',  label = TRUE) + c
 
 ```
 
+## ====> check out cell type markers
+```{r}
+all.markers <- FindAllMarkers(object = seu_data, verbose = FALSE, logfc.threshold = 0.2)
+```
+
+
 
 ## ====> check out gpr 4 briefly
 
