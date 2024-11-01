@@ -11,7 +11,9 @@ library(Seurat)
 library(stringr)
 library(ggplot2)
 library(patchwork)
-setwd("D:/scRNA_vasculature/mouse_development/")
+
+#setwd("D:/scRNA_vasculature/mouse_development/")
+setwd("~/Desktop/mouse_development")
 ```
 
 
@@ -20,7 +22,7 @@ setwd("D:/scRNA_vasculature/mouse_development/")
 # pre-processing: normalization, scaling, and dimensionality reduction
 
 ```{r}
-data <- read.tab("GSE104323_10X_expression_data.tab",header = T)
+data <- read.tab("/mouse_development_data/GSE104323_10X_expression_data.tab",header = T)
 row.names(data) <- data[,1]
 data <- data[,-1]
 
@@ -56,11 +58,25 @@ DimPlot(seu_data, group.by = 'characteristics..cell.cluster') + coord_fixed(rati
 DimPlot(seu_data, group.by = 'characteristics..cell.cluster',  label = TRUE) + coord_fixed(ratio = 0.6)
 
 ```
+```{r}
+Idents(seu_data) <- seu_data@meta.data$characteristics..age
+
+# RenameIdnets
+seu_data <- RenameIdents(seu_data, 'E16.5' = "embryonic")
+seu_data <- RenameIdents(seu_data, 'P0' = "postnatal", 'P5' = "postnatal")
+seu_data <- RenameIdents(seu_data, 'P18' = "weaning",'P19' = "weaning",  'P23' = "weaning")
+seu_data <- RenameIdents(seu_data, 'P120' = "adult", 'P132' = "adult")
+Idents(seu_data) <- factor(Idents(seu_data), levels = c("embryonic", "postnatal", "weaning","adult"))
+```
+
+
 
 ## ====> check out cell type markers
 ```{r}
 all.markers <- FindAllMarkers(object = seu_data, verbose = FALSE, logfc.threshold = 0.2)
 ```
+
+
 
 
 
@@ -75,6 +91,7 @@ VlnPlot(seu_data, features = "Gpr4", group.by = "characteristics..age") + labs(t
 ```{r}
 FeaturePlot(seu_data, features = "Gpr4")
 ```
+
 # Gpr4 VlnPlot across cell types
 ```{r}
 VlnPlot(subset(x = seu_data, subset = characteristics..cell.cluster == "RGL"), features = "Gpr4",group.by = "characteristics..age") + labs(title = "RGL")
@@ -344,7 +361,178 @@ DoHeatmap(object = test, features = c("Ndufb5", "Cox7b", "Slc3a2", "Atp5b", "Car
 DoHeatmap(object = test, features = candidates_ec_deg_passed_peak, group.by = "characteristics..age", label=FALSE) + theme(axis.text.x = element_text(size = 4), axis.text.y = element_text(size = 5), legend.text = element_text(size = 6)) + scale_fill_gradientn(colors = c("blue", "grey", "red"))
 
 
-
 DoHeatmap(object = test, features = c("Slc3a2", "Car2", "Cox7b", "Atp5b", "Car4", "Dusp3", "Mbnl1", "Hipk3"), group.by = "characteristics..age", label=FALSE) + theme(axis.text.x = element_text(size = 4), axis.text.y = element_text(size = 5), legend.text = element_text(size = 6)) + scale_fill_gradientn(colors = c("yellow", "orange", "red"))
+```
+
+
+
+
+## ======================= biological sets =========================
+
+```{r}
+
+# Define the cell type vectors
+brain_immunology <- c("PVM", "Endothelial", "VLMC", "Astro-adult", "OPC", "Cajal-Retzius", "Ependymal","MOL","NFOL", "Astro-adult", "Astro-juv", "Immature-Astro")
+neurogenesis <- c("RGL", "RGL_young", "nIPC", "nIPC-perin", "Neuroblast", "Immature-GC", "Immature-Astro", "Astro-juv", "Immature-Pyr", "CA3-Pyr", "Ependymal",  "GC-juv","GC-adult", "GABA", "Immature-GABA", "Cajal-Retzius")
+memory_circuit <- c("Cajal-Retzius", "CA3-Pyr", "Immature-Pyr", "GABA", "Astro-adult", "Immature-GABA", "Endothelial")
+metabolic_system <- c("Astro-adult", "OPC", "MOL", "Endothelial", "Ependymal", "Immature-Astro", "VLMC", "Immature-GC")
+
+
+# Subset the Seurat object based on each vector
+brain_immunology_subset <- subset(seu_data, subset = characteristics..cell.cluster %in% brain_immunology)
+neurogenesis_subset <- subset(seu_data, subset = characteristics..cell.cluster %in% neurogenesis)
+memory_circuit_subset <- subset(seu_data, subset = characteristics..cell.cluster %in% memory_circuit)
+metabolic_system_subset <- subset(seu_data, subset = characteristics..cell.cluster %in% metabolic_system)
+```
+
+```{r}
+# Define a function to process each Seurat object and plot DimPlot
+process_and_plot <- function(seurat_obj, title) {
+  seurat_obj <- NormalizeData(seurat_obj)
+  seurat_obj <- FindVariableFeatures(seurat_obj, selection.method = "vst", nfeatures = 2000)
+  seurat_obj <- ScaleData(seurat_obj)
+  seurat_obj <- RunPCA(seurat_obj, verbose = FALSE)
+  seurat_obj <- FindNeighbors(seurat_obj, dims = 1:30)
+  seurat_obj <- FindClusters(seurat_obj, resolution = 1.0, verbose = FALSE)
+  seurat_obj <- RunUMAP(seurat_obj, dims = 1:25)
+  print(DimPlot(seurat_obj, reduction = "umap",  label = TRUE) + ggtitle(title))
+  return(seurat_obj)
+}
+
+# 1. Brain Immunology Subset
+brain_immunology_subset <- process_and_plot(brain_immunology_subset, "Brain Immunology Subset")
+# 2. Neurogenesis Subset
+neurogenesis_subset <- process_and_plot(neurogenesis_subset, "Neurogenesis Subset")
+# 3. Memory Circuit Development and Pruning Subset
+memory_circuit_subset <- process_and_plot(memory_circuit_subset, "Memory Circuit Development and Pruning Subset")
+# 4. Metabolic System Subset
+metabolic_system_subset <- process_and_plot(metabolic_system_subset, "Metabolic System Subset")
 
 ```
+
+# plot dim plots for 4 sets - by clusters & cell types
+```{r}
+pdf("4sets_dim.pdf", width = 8, height = 7)
+names <- c("brain immunology", "neurogenesis", "memory circuit", "metabolism")
+name_idx <- 1
+for (i in c(brain_immunology_subset, neurogenesis_subset, memory_circuit_subset, metabolic_system_subset))
+{
+  p <- DimPlot(i, reduction = "umap",  label = TRUE) + ggtitle(paste0(names[name_idx], " - clusters")) + theme(plot.title = element_text(hjust = 0.5))
+  print(p)
+  p <- DimPlot(i, group.by = "characteristics..cell.cluster", reduction = "umap",  label = TRUE) + ggtitle(paste0(names[name_idx], " - cell types")) + theme(plot.title = element_text(hjust = 0.5))
+  print(p)
+  
+  name_idx <- name_idx+1
+}
+dev.off()
+```
+
+
+## ====> temporal-specific markers
+```{r}
+DefaultAssay(endo_cells)  <- "RNA"
+
+deg1 <- FindMarkers(endo_cells, ident.1 = "postnatal", ident.2 = "embryonic", logfc.threshold = 0.2)
+write.csv(deg1, "result/deg_tab_ec_postnatal.csv")
+deg2 <- FindMarkers(endo_cells, ident.1 = "weaning", ident.2 = "postnatal", logfc.threshold = 0.2)
+write.csv(deg2, "result/deg_tab_ec_weaning.csv")
+deg3 <- FindMarkers(endo_cells, ident.1 = "adult", ident.2 = "weaning", logfc.threshold = 0.2)
+write.csv(deg3, "result/deg_tab_ec_adult.csv")
+
+
+names <- c("immunology", "neurogenesis", "memory", "metabolism")
+name_idx <- 1
+immunology_degs <- c()
+neurogenesis_degs <- c()
+memory_degs <- c()
+metabolism_degs <- c()
+
+temp_deg <- c()
+
+for (i in c(brain_immunology_subset, neurogenesis_subset, memory_circuit_subset, metabolic_system_subset))
+{
+  DefaultAssay(i)  <- "RNA"
+  i@meta.data$cluster <- i@active.ident
+  Idents(i) <- i@meta.data$characteristics..age
+
+  # RenameIdnets
+  i <- RenameIdents(i, 'E16.5' = "embryonic")
+  i <- RenameIdents(i, 'P0' = "postnatal", 'P5' = "postnatal")
+  i <- RenameIdents(i, 'P18' = "weaning",'P19' = "weaning",  'P23' = "weaning")
+  i <- RenameIdents(i, 'P120' = "adult", 'P132' = "adult")
+  Idents(i) <- factor(Idents(i), levels = c("embryonic", "postnatal", "weaning","adult"))
+
+  temp <- FindMarkers(i, ident.1 = "postnatal", ident.2 = "embryonic", logfc.threshold = 0.2)
+  temp_deg <- c(temp_deg, temp)
+  write.csv(temp, paste0("result/4sets/", names[name_idx], "postnatal_vs_embry.csv"))
+  temp <- FindMarkers(i, ident.1 = "weaning", ident.2 = "postnatal", logfc.threshold = 0.2)
+  temp_deg <- c(temp_deg, temp)
+  write.csv(temp, paste0("result/4sets/", names[name_idx], "weaning_vs_postnatal.csv"))
+  temp <- FindMarkers(i, ident.1 = "adult", ident.2 = "weaning", logfc.threshold = 0.2)
+  temp_deg <- c(temp_deg, temp)
+  write.csv(temp, paste0("result/4sets/", names[name_idx], "adult_vs_weaning.csv"))
+  
+  name_idx <- name_idx+1
+}
+
+```
+
+
+## ======================= monocle3 =========================
+
+
+```{r}
+# Load Monocle3
+library(monocle3)
+library(SeuratWrappers)
+```
+
+
+```{r}
+# Convert Seurat object to Monocle CDS (CellDataSet) for each subset
+brain_immunology_cds <- as.cell_data_set(brain_immunology_subset)
+neurogenesis_cds <- as.cell_data_set(neurogenesis_subset)
+memory_circuit_cds <- as.cell_data_set(memory_circuit_subset)
+metabolic_system_cds <- as.cell_data_set(metabolic_system_subset)
+```
+
+
+```{r}
+# Preprocess and align cells along pseudotime for each subset
+#brain_immunology_cds <- preprocess_cds(brain_immunology_cds, num_dim = 50)
+#brain_immunology_cds <- reduce_dimension(brain_immunology_cds)
+brain_immunology_cds <- cluster_cells(brain_immunology_cds, reduction_method = "UMAP")
+brain_immunology_cds <- learn_graph(brain_immunology_cds)
+brain_immunology_cds <- order_cells(brain_immunology_cds)
+
+neurogenesis_cds <- cluster_cells(neurogenesis_cds, reduction_method = "UMAP")
+neurogenesis_cds <- learn_graph(neurogenesis_cds)
+neurogenesis_cds <- order_cells(neurogenesis_cds)
+
+
+memory_circuit_cds <- cluster_cells(memory_circuit_cds, reduction_method = "UMAP")
+memory_circuit_cds <- learn_graph(memory_circuit_cds)
+memory_circuit_cds <- order_cells(memory_circuit_cds)
+
+metabolic_system_cds <- cluster_cells(metabolic_system_cds, reduction_method = "UMAP")
+metabolic_system_cds <- learn_graph(metabolic_system_cds)
+metabolic_system_cds <- order_cells(metabolic_system_cds)
+```
+
+
+```{r}
+# Plot pseudotime
+pdf("traj_with_pseudotime.pdf", width = 8, height = 7)
+print(plot_cells(brain_immunology_cds, color_cells_by = "pseudotime", show_trajectory_graph = TRUE) + ggtitle("immunology") + theme(plot.title = element_text(hjust = 0.5)))
+print(plot_cells(neurogenesis_cds, color_cells_by = "pseudotime", show_trajectory_graph = TRUE) + ggtitle("neurogenesis") + theme(plot.title = element_text(hjust = 0.5)))
+print(plot_cells(memory_circuit_cds, color_cells_by = "pseudotime", show_trajectory_graph = TRUE) + ggtitle("memory") + theme(plot.title = element_text(hjust = 0.5)))
+print(plot_cells(metabolic_system_cds, color_cells_by = "pseudotime", show_trajectory_graph = TRUE) + ggtitle("metabolism") + theme(plot.title = element_text(hjust = 0.5)))
+dev.off()
+
+
+
+# Plot   others
+plot_cells(brain_immunology_cds, show_trajectory_graph = TRUE)
+plot_cells(brain_immunology_cds, color_cells_by = "partition", show_trajectory_graph = TRUE)
+```
+
